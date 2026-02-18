@@ -1197,21 +1197,32 @@ let session = { user: null }; // { uid, name, email, isAdmin }
 let appState = { form: {}, routine: null, progress: {}, review: {} };
 
 // ════════════════════════════════════════════════
-// STORAGE HELPERS
+// STORAGE HELPERS — localStorage (works anywhere)
 // ════════════════════════════════════════════════
+// "shared" keys are prefixed with "apex_shared_" so all users on the
+// same browser domain share them (users index, user profiles).
+// Personal keys are prefixed with "apex_" only.
+function stKey(key, shared) { return (shared ? 'apex_shared_' : 'apex_') + key; }
+
 async function stGet(key, shared=false) {
-  try { const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
-  catch(e){ return null; }
+  try {
+    const raw = localStorage.getItem(stKey(key, shared));
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
 }
 async function stSet(key, val, shared=false) {
-  try { await window.storage.set(key, JSON.stringify(val), shared); } catch(e){}
+  try { localStorage.setItem(stKey(key, shared), JSON.stringify(val)); } catch(e){}
 }
 async function stDel(key, shared=false) {
-  try { await window.storage.delete(key, shared); } catch(e){}
+  try { localStorage.removeItem(stKey(key, shared)); } catch(e){}
 }
 async function stList(prefix='', shared=false) {
-  try { const r = await window.storage.list(prefix, shared); return r ? r.keys : []; }
-  catch(e){ return []; }
+  try {
+    const fullPrefix = stKey(prefix, shared);
+    return Object.keys(localStorage)
+      .filter(k => k.startsWith(fullPrefix))
+      .map(k => k.slice(stKey('', shared).length));
+  } catch(e) { return []; }
 }
 
 // ════════════════════════════════════════════════
@@ -1285,11 +1296,12 @@ async function doLogin() {
   if(!userData||userData.passHash!==simpleHash(pass)){ errEl.textContent='Contraseña incorrecta.';errEl.style.display='';return; }
 
   session.user = { uid, name: userData.name, email: userData.email, isAdmin: userData.isAdmin||false };
+  await stSet('apex-session', { uid }); // persist session
   await loadUserState();
   updateTopbar();
   toast(`¡Bienvenido/a, ${userData.name.split(' ')[0]}! 👋`);
 
-  if(appState.routine) showScreen('routine');
+  if(appState.routine){ renderRoutine(); showScreen('routine'); }
   else showScreen('home');
 }
 
@@ -1331,6 +1343,7 @@ function simpleHash(str) {
 }
 
 async function logout() {
+  await stDel('apex-session'); // clear persisted session
   session.user = null;
   appState = { form:{}, routine:null, progress:{}, review:{} };
   updateTopbar();
@@ -1907,7 +1920,6 @@ function getFallback(){
 // INIT
 // ════════════════════════════════════════════════
 async function init(){
-  // Try to restore session from storage
   const savedSession = await stGet('apex-session');
   if(savedSession && savedSession.uid){
     const userData = await stGet('user-'+savedSession.uid, true);
@@ -1915,40 +1927,10 @@ async function init(){
       session.user = {uid:savedSession.uid,name:userData.name,email:userData.email,isAdmin:userData.isAdmin||false};
       await loadUserState();
       updateTopbar();
-      if(appState.routine){
-        renderRoutine();
-      }
+      if(appState.routine) renderRoutine();
     }
   }
 }
-
-// Override logout to clear session
-const _logout = logout;
-logout = async function(){
-  await stDel('apex-session');
-  await _logout();
-};
-
-// Override doLogin to save session
-const _doLogin = doLogin;
-doLogin = async function(){
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('auth-error');
-  if(!email||!pass){errEl.textContent='Completa todos los campos.';errEl.style.display='';return;}
-  const users = await stGet('users-index',true)||{};
-  const uid=users[email];
-  if(!uid){errEl.textContent='No existe una cuenta con ese correo.';errEl.style.display='';return;}
-  const userData=await stGet('user-'+uid,true);
-  if(!userData||userData.passHash!==simpleHash(pass)){errEl.textContent='Contraseña incorrecta.';errEl.style.display='';return;}
-  session.user={uid,name:userData.name,email:userData.email,isAdmin:userData.isAdmin||false};
-  await stSet('apex-session',{uid});
-  await loadUserState();
-  updateTopbar();
-  toast(`¡Bienvenido/a, ${userData.name.split(' ')[0]}! 👋`);
-  if(appState.routine){renderRoutine();showScreen('routine');}
-  else showScreen('home');
-};
 
 init();
 </script>
