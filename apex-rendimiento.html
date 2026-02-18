@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX · Rendimiento Integral</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230A1628'/%3E%3Cpath d='M32 8 L56 52 H40 L32 36 L24 52 H8 Z' fill='%2300C2FF'/%3E%3Cpath d='M32 20 L44 44 H36 L32 36 L28 44 H20 Z' fill='%237C3AED'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════ */
+:root {
+  --bg:        #060D1A;
+  --bg2:       #0A1628;
+  --bg3:       #0F1F38;
+  --panel:     rgba(255,255,255,0.04);
+  --panel2:    rgba(255,255,255,0.07);
+
+  --blue:      #00C2FF;
+  --blue-dark: #0088CC;
+  --blue-glow: rgba(0,194,255,0.18);
+  --green:     #00E676;
+  --green-dark:#00A855;
+  --green-glow:rgba(0,230,118,0.15);
+  --purple:    #7C3AED;
+  --purple-light:#A855F7;
+  --purple-glow:rgba(124,58,237,0.2);
+  --red:       #FF4757;
+  --yellow:    #FFD60A;
+
+  --text:      #E8F0FE;
+  --text-muted:#7A8BA8;
+  --border:    rgba(255,255,255,0.08);
+  --border-active: rgba(0,194,255,0.4);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);color:var(--text);
+  overflow-x:hidden;min-height:100vh;
+  line-height:1.6;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--blue-dark);border-radius:3px}
+
+/* GRID BACKGROUND */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,194,255,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,194,255,0.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+
+/* ═══════════════════════════════════
+   SCREENS
+═══════════════════════════════════ */
+.screen{display:none;position:relative;z-index:1;min-height:100vh;animation:fadeIn 0.45s ease}
+.screen.active{display:flex;flex-direction:column}
+@keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ═══════════════════════════════════
+   TOPBAR
+═══════════════════════════════════ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:300;
+  display:flex;align-items:center;gap:1rem;
+  padding:0 2rem;height:56px;
+  background:rgba(6,13,26,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.topbar-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.5rem;letter-spacing:0.2em;
+  background:linear-gradient(90deg,var(--blue),var(--purple-light));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  flex-shrink:0;cursor:pointer;
+}
+.topbar-sep{flex:1}
+.topbar-nav{display:flex;gap:0.25rem}
+.topbar-nav button{
+  background:none;border:none;
+  padding:0.4rem 0.9rem;border-radius:6px;
+  font-family:'DM Sans',sans-serif;font-size:0.8rem;
+  letter-spacing:0.05em;color:var(--text-muted);
+  cursor:pointer;transition:all 0.2s;
+}
+.topbar-nav button:hover{color:var(--text);background:var(--panel)}
+.topbar-nav button.active-nav{color:var(--blue);background:rgba(0,194,255,0.08)}
+.topbar-auth{display:flex;gap:0.5rem;align-items:center}
+.topbar-user{
+  display:flex;align-items:center;gap:0.5rem;
+  font-size:0.82rem;color:var(--text-muted);
+}
+.topbar-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.7rem;font-weight:700;color:white;flex-shrink:0;
+}
+
+/* ═══════════════════════════════════
+   BUTTONS
+═══════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;
+  padding:0.65rem 1.5rem;border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.85rem;
+  letter-spacing:0.04em;border:none;cursor:pointer;transition:all 0.22s;
+  white-space:nowrap;
+}
+.btn-blue{background:var(--blue);color:var(--bg)}
+.btn-blue:hover{background:#22CCFF;box-shadow:0 0 20px var(--blue-glow);transform:translateY(-1px)}
+.btn-green{background:var(--green);color:var(--bg)}
+.btn-green:hover{background:#33FFAA;box-shadow:0 0 20px var(--green-glow);transform:translateY(-1px)}
+.btn-purple{background:var(--purple);color:white}
+.btn-purple:hover{background:var(--purple-light);box-shadow:0 0 20px var(--purple-glow);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--blue);border:1px solid var(--blue-dark)}
+.btn-outline:hover{background:rgba(0,194,255,0.08)}
+.btn-ghost{background:var(--panel);color:var(--text-muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--panel2);color:var(--text)}
+.btn-sm{padding:0.4rem 1rem;font-size:0.78rem}
+.btn-lg{padding:0.85rem 2.2rem;font-size:0.95rem}
+.btn-full{width:100%}
+
+/* ═══════════════════════════════════
+   FORM ELEMENTS
+═══════════════════════════════════ */
+.field{margin-bottom:1.1rem}
+.field label{
+  display:block;font-size:0.74rem;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:0.45rem;
+}
+.field label span{color:var(--blue);margin-left:2px}
+.field input,.field select,.field textarea{
+  width:100%;padding:0.7rem 1rem;
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:0.93rem;
+  transition:border-color 0.2s,background 0.2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--blue);
+  background:rgba(0,194,255,0.05);
+}
+.field select option{background:var(--bg2)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+.scale-row{display:flex;gap:0.4rem}
+.scale-btn{
+  flex:1;padding:0.55rem 0;border-radius:6px;
+  background:var(--panel);border:1px solid var(--border);
+  color:var(--text-muted);font-size:0.85rem;font-weight:600;
+  cursor:pointer;transition:all 0.18s;text-align:center;
+}
+.scale-btn:hover{border-color:var(--blue);color:var(--blue)}
+.scale-btn.sel{background:var(--blue);color:var(--bg);border-color:var(--blue)}
+.scale-labels{display:flex;justify-content:space-between;margin-top:0.25rem}
+.scale-labels span{font-size:0.68rem;color:var(--text-muted)}
+
+.check-group{display:flex;flex-direction:column;gap:0.45rem}
+.check-item{
+  display:flex;align-items:center;gap:0.7rem;
+  padding:0.6rem 0.9rem;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;cursor:pointer;transition:all 0.18s;
+}
+.check-item:hover{border-color:var(--blue-dark);background:var(--panel2)}
+.check-item.sel{border-color:var(--blue);background:rgba(0,194,255,0.07)}
+.check-item .chk{
+  width:17px;height:17px;border:2px solid var(--border);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:0.65rem;flex-shrink:0;transition:all 0.18s;
+}
+.check-item.sel .chk{background:var(--blue);border-color:var(--blue);color:var(--bg)}
+.check-item span{font-size:0.88rem;color:var(--text-muted)}
+.check-item.sel span{color:var(--text)}
+
+/* ═══════════════════════════════════
+   CARDS / PANELS
+═══════════════════════════════════ */
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;padding:1.5rem;
+}
+.card-glow-blue{border-color:rgba(0,194,255,0.25);box-shadow:0 0 30px rgba(0,194,255,0.06)}
+.card-glow-green{border-color:rgba(0,230,118,0.25);box-shadow:0 0 30px rgba(0,230,118,0.06)}
+.card-glow-purple{border-color:rgba(124,58,237,0.25);box-shadow:0 0 30px rgba(124,58,237,0.06)}
+
+.badge{
+  display:inline-flex;align-items:center;gap:0.35rem;
+  padding:0.25rem 0.7rem;border-radius:100px;
+  font-size:0.72rem;letter-spacing:0.08em;font-weight:600;
+}
+.badge-blue{background:rgba(0,194,255,0.12);color:var(--blue);border:1px solid rgba(0,194,255,0.25)}
+.badge-green{background:rgba(0,230,118,0.12);color:var(--green);border:1px solid rgba(0,230,118,0.25)}
+.badge-purple{background:rgba(124,58,237,0.12);color:var(--purple-light);border:1px solid rgba(124,58,237,0.25)}
+.badge-red{background:rgba(255,71,87,0.12);color:var(--red);border:1px solid rgba(255,71,87,0.25)}
+
+.section-label{
+  font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:0.6rem;display:block;
+}
+.section-title{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(1.8rem,3.5vw,2.8rem);
+  color:var(--text);line-height:1.1;
+}
+.section-title .accent{color:var(--blue)}
+.section-title .accent-g{color:var(--green)}
+.section-title .accent-p{color:var(--purple-light)}
+.divider{width:40px;height:3px;border-radius:2px;margin:1rem 0}
+.divider-blue{background:linear-gradient(90deg,var(--blue),transparent)}
+.divider-green{background:linear-gradient(90deg,var(--green),transparent)}
+
+.page-wrap{max-width:900px;margin:0 auto;padding:7rem 1.5rem 4rem;width:100%}
+.page-wrap-wide{max-width:1100px;margin:0 auto;padding:7rem 1.5rem 4rem;width:100%}
+
+/* ═══════════════════════════════════
+   TOAST
+═══════════════════════════════════ */
+.toast{
+  position:fixed;bottom:2rem;left:50%;
+  transform:translateX(-50%) translateY(120px);
+  padding:0.7rem 1.4rem;border-radius:100px;
+  font-size:0.83rem;font-weight:600;z-index:999;
+  transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events:none;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast-success{background:var(--green);color:var(--bg)}
+.toast-error{background:var(--red);color:white}
+.toast-info{background:var(--blue);color:var(--bg)}
+
+/* ═══════════════════════════════════
+   PROGRESS BARS
+═══════════════════════════════════ */
+.prog-track{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width 0.6s ease}
+.prog-blue{background:linear-gradient(90deg,var(--blue-dark),var(--blue))}
+.prog-green{background:linear-gradient(90deg,var(--green-dark),var(--green))}
+.prog-purple{background:linear-gradient(90deg,var(--purple),var(--purple-light))}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: HOME ────
+═══════════════════════════════════ */
+#screen-home{padding:0}
+
+/* HERO */
+.home-hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:7rem 2rem 5rem;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,rgba(0,194,255,0.12) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 90%,rgba(124,58,237,0.14) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 50% at 10% 80%,rgba(0,230,118,0.08) 0%,transparent 60%);
+  position:relative;
+}
+.hero-eyebrow{
+  font-size:0.72rem;letter-spacing:0.4em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:1.5rem;
+  animation:fadeIn 0.5s ease 0.1s both;
+}
+.hero-h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(4.5rem,12vw,10rem);
+  letter-spacing:0.06em;line-height:0.88;
+  animation:fadeIn 0.5s ease 0.2s both;
+}
+.hero-h1 .line1{
+  background:linear-gradient(90deg,var(--blue),#88E4FF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-h1 .line2{
+  background:linear-gradient(90deg,var(--purple-light),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{
+  font-size:1.1rem;color:var(--text-muted);
+  max-width:540px;margin:1.5rem auto 0;line-height:1.7;
+  animation:fadeIn 0.5s ease 0.3s both;
+}
+.hero-sub strong{color:var(--text)}
+.hero-pills{
+  display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;
+  margin:2rem 0;animation:fadeIn 0.5s ease 0.4s both;
+}
+.hero-cta{
+  display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;
+  animation:fadeIn 0.5s ease 0.5s both;
+}
+.hero-disclaimer{
+  margin-top:2rem;padding:0.8rem 1.4rem;
+  background:rgba(255,71,87,0.07);border:1px solid rgba(255,71,87,0.2);
+  border-radius:10px;font-size:0.78rem;color:rgba(232,240,254,0.55);
+  max-width:520px;line-height:1.5;
+  animation:fadeIn 0.5s ease 0.6s both;
+}
+.hero-disclaimer strong{color:var(--red)}
+
+/* STATS STRIP */
+.stats-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--border);
+}
+.stat-cell{
+  background:var(--bg2);padding:2rem 1.5rem;text-align:center;
+}
+.stat-num{
+  font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:0.04em;
+}
+.stat-num.blue{color:var(--blue)}
+.stat-num.green{color:var(--green)}
+.stat-num.purple{color:var(--purple-light)}
+.stat-num.yellow{color:var(--yellow)}
+.stat-lbl{font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-top:0.2rem}
+
+/* BLOG SECTION */
+.blog-section{
+  padding:5rem 2rem;
+  background:linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%);
+}
+.blog-inner{max-width:1100px;margin:0 auto}
+.blog-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2.5rem;flex-wrap:wrap;gap:1rem}
+.blog-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:1.5rem}
+.blog-card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;
+  transition:transform 0.25s,border-color 0.25s,box-shadow 0.25s;
+  cursor:pointer;
+}
+.blog-card:hover{transform:translateY(-4px);border-color:var(--blue-dark);box-shadow:0 12px 40px rgba(0,0,0,0.3)}
+.blog-card-img{
+  height:160px;display:flex;align-items:center;justify-content:center;
+  font-size:3rem;
+  position:relative;overflow:hidden;
+}
+.blog-card-img.physical{background:linear-gradient(135deg,rgba(0,194,255,0.15),rgba(0,230,118,0.1))}
+.blog-card-img.mental{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(0,194,255,0.1))}
+.blog-card-img.sleep{background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(255,214,10,0.08))}
+.blog-card-img.nutrition{background:linear-gradient(135deg,rgba(0,230,118,0.15),rgba(0,194,255,0.08))}
+.blog-card.featured .blog-card-img{height:220px;font-size:4.5rem}
+.blog-body{padding:1.2rem}
+.blog-cat{font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;font-weight:600;margin-bottom:0.5rem}
+.blog-cat.phy{color:var(--blue)}
+.blog-cat.men{color:var(--purple-light)}
+.blog-cat.slp{color:var(--yellow)}
+.blog-cat.nut{color:var(--green)}
+.blog-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text);line-height:1.3;margin-bottom:0.5rem}
+.blog-card.featured .blog-title{font-size:1.25rem}
+.blog-excerpt{font-size:0.82rem;color:var(--text-muted);line-height:1.55}
+.blog-meta{display:flex;align-items:center;gap:0.5rem;margin-top:0.9rem;font-size:0.72rem;color:var(--text-muted)}
+.blog-dot{width:4px;height:4px;border-radius:50%;background:var(--text-muted)}
+
+/* DATA SECTION */
+.data-section{padding:5rem 2rem;background:var(--bg)}
+.data-inner{max-width:1100px;margin:0 auto}
+.data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2.5rem}
+.data-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:1.8rem;
+  position:relative;overflow:hidden;
+}
+.data-card::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:100px;height:100px;border-radius:50%;
+  opacity:0.07;
+}
+.data-card.dc-blue::before{background:var(--blue)}
+.data-card.dc-green::before{background:var(--green)}
+.data-card.dc-purple::before{background:var(--purple)}
+.data-icon{font-size:2rem;margin-bottom:1rem}
+.data-headline{
+  font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:0.04em;
+  line-height:1;margin-bottom:0.4rem;
+}
+.data-headline.blue{color:var(--blue)}
+.data-headline.green{color:var(--green)}
+.data-headline.purple{color:var(--purple-light)}
+.data-desc{font-size:0.85rem;color:var(--text-muted);line-height:1.55}
+.data-source{font-size:0.68rem;color:rgba(122,139,168,0.5);margin-top:0.75rem;letter-spacing:0.05em}
+
+/* CTA SECTION */
+.cta-section{
+  padding:5rem 2rem;
+  background:linear-gradient(135deg,rgba(0,194,255,0.06) 0%,rgba(124,58,237,0.1) 100%);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  text-align:center;
+}
+.cta-inner{max-width:640px;margin:0 auto}
+
+/* FOOTER */
+.home-footer{
+  padding:2.5rem 2rem;background:var(--bg2);
+  border-top:1px solid var(--border);text-align:center;
+}
+.home-footer p{font-size:0.78rem;color:var(--text-muted)}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: AUTH ────
+═══════════════════════════════════ */
+#screen-auth{
+  align-items:center;justify-content:center;
+  padding:7rem 1.5rem 3rem;
+  background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(0,194,255,0.08) 0%,transparent 70%);
+}
+.auth-box{
+  width:100%;max-width:420px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:16px;padding:2.5rem;
+}
+.auth-logo{
+  font-family:'Bebas Neue',sans-serif;font-size:2rem;
+  letter-spacing:0.2em;text-align:center;margin-bottom:0.25rem;
+  background:linear-gradient(90deg,var(--blue),var(--purple-light));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.auth-subtitle{text-align:center;font-size:0.83rem;color:var(--text-muted);margin-bottom:2rem}
+.auth-tabs{display:flex;margin-bottom:1.5rem;background:var(--panel);border-radius:8px;padding:3px;gap:3px}
+.auth-tab{
+  flex:1;padding:0.5rem;border-radius:6px;border:none;
+  background:transparent;color:var(--text-muted);
+  font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;
+  cursor:pointer;transition:all 0.2s;
+}
+.auth-tab.active{background:var(--bg3);color:var(--text)}
+.auth-error{
+  padding:0.65rem 0.9rem;background:rgba(255,71,87,0.1);
+  border:1px solid rgba(255,71,87,0.3);border-radius:8px;
+  font-size:0.82rem;color:var(--red);margin-bottom:1rem;display:none;
+}
+.auth-sep{text-align:center;font-size:0.75rem;color:var(--text-muted);margin:0.75rem 0}
+.auth-back{
+  text-align:center;margin-top:1rem;
+  font-size:0.8rem;color:var(--text-muted);
+}
+.auth-back a{color:var(--blue);cursor:pointer;text-decoration:none}
+.auth-back a:hover{text-decoration:underline}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: FORM ────
+═══════════════════════════════════ */
+.form-section-hdr{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;
+  color:var(--blue);border-bottom:1px solid var(--border);
+  padding-bottom:0.5rem;margin:1.5rem 0 1.1rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: LOADING ────
+═══════════════════════════════════ */
+#screen-loading{align-items:center;justify-content:center;text-align:center;padding:2rem}
+.loader-ring{
+  width:72px;height:72px;border-radius:50%;
+  border:3px solid var(--panel2);
+  border-top-color:var(--blue);
+  animation:spin 0.9s linear infinite;
+  margin:0 auto 1.5rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.12em;color:var(--text)}
+.loader-sub{font-size:0.83rem;color:var(--text-muted);margin-top:0.4rem}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: ROUTINE ────
+═══════════════════════════════════ */
+.routine-hdr{margin-bottom:1.5rem}
+.routine-hdr h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.5rem,5vw,3.8rem);letter-spacing:0.06em;
+  background:linear-gradient(90deg,var(--blue),var(--green));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.routine-meta-row{display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.5rem}
+
+.week-prog-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;
+}
+.week-prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem}
+.week-prog-top span{font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)}
+.week-prog-top strong{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.08em;color:var(--green)}
+
+.day-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:0.75rem;overflow:hidden;
+  transition:border-color 0.25s;
+}
+.day-card:hover{border-color:rgba(0,194,255,0.2)}
+.day-card.day-done{border-color:rgba(0,230,118,0.35)}
+.day-hdr{
+  display:flex;align-items:center;gap:0.9rem;
+  padding:0.9rem 1.1rem;cursor:pointer;
+}
+.day-num{
+  font-family:'Bebas Neue',sans-serif;font-size:1.5rem;
+  letter-spacing:0.08em;color:var(--text-muted);
+  min-width:1.8rem;text-align:center;
+}
+.day-card.day-done .day-num{color:var(--green)}
+.day-info{flex:1}
+.day-name{font-weight:700;font-size:0.95rem;color:var(--text)}
+.day-focus{font-size:0.78rem;color:var(--text-muted)}
+.day-tick{
+  width:26px;height:26px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.78rem;cursor:pointer;transition:all 0.2s;flex-shrink:0;
+}
+.day-tick:hover{border-color:var(--green)}
+.day-tick.ticked{background:var(--green);border-color:var(--green);color:var(--bg)}
+.day-chev{font-size:0.7rem;color:var(--text-muted);transition:transform 0.25s;flex-shrink:0}
+.day-card.open .day-chev{transform:rotate(180deg)}
+.day-body{display:none;padding:0 1.1rem 1.1rem}
+.day-card.open .day-body{display:block}
+
+.act-list{list-style:none}
+.act-item{
+  display:flex;align-items:flex-start;gap:0.75rem;
+  padding:0.7rem 0;border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.act-item:last-child{border-bottom:none}
+.act-ico{
+  width:34px;height:34px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1rem;
+}
+.act-ico.phys{background:rgba(0,194,255,0.1)}
+.act-ico.psyc{background:rgba(124,58,237,0.12)}
+.act-ico.spir{background:rgba(0,230,118,0.1)}
+.act-content{flex:1}
+.act-name{font-weight:600;font-size:0.92rem;color:var(--text)}
+.act-desc{font-size:0.79rem;color:var(--text-muted);margin-top:0.2rem;line-height:1.5}
+.act-dur{font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);font-weight:600;flex-shrink:0;margin-top:4px}
+.act-check-btn{
+  display:inline-flex;align-items:center;gap:0.35rem;
+  margin-top:0.5rem;padding:0.25rem 0.7rem;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:100px;font-size:0.72rem;color:var(--text-muted);
+  cursor:pointer;transition:all 0.18s;
+}
+.act-check-btn:hover{border-color:var(--green-dark);color:var(--text)}
+.act-check-btn.ticked{background:rgba(0,230,118,0.12);border-color:var(--green-dark);color:var(--green)}
+
+.routine-quote{
+  margin-top:1.5rem;padding:1rem 1.2rem;
+  border-left:3px solid var(--blue);
+  background:rgba(0,194,255,0.04);border-radius:0 10px 10px 0;
+  font-size:0.88rem;color:var(--text-muted);font-style:italic;line-height:1.6;
+}
+.routine-quote cite{display:block;font-style:normal;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue-dark);margin-top:0.35rem}
+
+.routine-actions{display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: REVIEW ────
+═══════════════════════════════════ */
+
+/* ═══════════════════════════════════
+   ──── SCREEN: RESULTS ────
+═══════════════════════════════════ */
+.results-hero-sec{text-align:center;margin-bottom:2.5rem}
+.big-score{
+  font-family:'Bebas Neue',sans-serif;font-size:7rem;
+  letter-spacing:0.04em;line-height:1;
+  background:linear-gradient(135deg,var(--blue),var(--green));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.results-title{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(1.8rem,3.5vw,2.8rem);color:var(--text);margin-top:0.5rem;
+}
+.compare-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:2rem}
+.compare-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:1.2rem 1.4rem;
+}
+.compare-card h4{font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem}
+.delta{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:0.04em}
+.delta-up{color:var(--green)}
+.delta-down{color:var(--red)}
+.delta-same{color:var(--yellow)}
+.compare-detail{font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem}
+
+.ach-section h3{
+  font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;
+  color:var(--blue);margin-bottom:0.75rem;
+}
+.ach-item{
+  display:flex;gap:0.7rem;padding:0.7rem 0;
+  border-bottom:1px solid var(--border);font-size:0.87rem;color:var(--text-muted);line-height:1.5;
+}
+.ach-item:last-child{border-bottom:none}
+.ach-ico{font-size:1.1rem;flex-shrink:0}
+
+/* ═══════════════════════════════════
+   ──── SCREEN: ADMIN ────
+═══════════════════════════════════ */
+.admin-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:2rem;flex-wrap:gap;gap:1rem;
+}
+.admin-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--text)}
+.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.admin-stat{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:1.2rem 1.4rem;
+}
+.admin-stat-num{
+  font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:0.04em;color:var(--blue);
+}
+.admin-stat-lbl{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-top:0.2rem}
+.admin-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.admin-table th{
+  text-align:left;padding:0.65rem 1rem;
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);
+}
+.admin-table td{
+  padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);
+  color:var(--text);
+}
+.admin-table tr:hover td{background:var(--panel)}
+.admin-table-wrap{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;overflow-x:auto;
+}
+.admin-search{
+  display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;
+}
+.admin-search input{
+  flex:1;min-width:200px;padding:0.6rem 1rem;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:0.87rem;
+}
+.admin-search input:focus{outline:none;border-color:var(--blue)}
+.admin-empty{text-align:center;padding:3rem;color:var(--text-muted);font-size:0.9rem}
+
+/* ═══════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════ */
+@media(max-width:900px){
+  .blog-grid{grid-template-columns:1fr 1fr}
+  .blog-card.featured{grid-column:1/-1}
+  .data-grid{grid-template-columns:1fr 1fr}
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+  .compare-grid{grid-template-columns:1fr}
+  .admin-stats{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  .blog-grid{grid-template-columns:1fr}
+  .data-grid{grid-template-columns:1fr}
+  .topbar-nav{display:none}
+  .admin-stats{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<nav class="topbar">
+  <div class="topbar-logo" onclick="goHome()">APEX</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-nav" id="topbar-nav">
+    <button onclick="goHome()">Inicio</button>
+    <button id="nav-routine" style="display:none" onclick="showScreen('routine')">Mi Rutina</button>
+    <button id="nav-admin" style="display:none" onclick="showScreen('admin');renderAdmin()">Admin</button>
+  </div>
+  <div class="topbar-auth" id="topbar-auth">
+    <button class="btn btn-outline btn-sm" onclick="showScreen('auth')">Iniciar sesión</button>
+    <button class="btn btn-blue btn-sm" onclick="showAuthTab('register')">Registrarse</button>
+  </div>
+  <div class="topbar-user" id="topbar-user" style="display:none">
+    <div class="topbar-avatar" id="topbar-avatar">?</div>
+    <span id="topbar-name"></span>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Salir</button>
+  </div>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: HOME
+══════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+
+  <!-- HERO -->
+  <div class="home-hero">
+    <p class="hero-eyebrow">Plataforma de Rendimiento Integral · Bachillerato 11°</p>
+    <h1 class="hero-h1">
+      <span class="line1">APEX</span><br>
+      <span class="line2">RENDIMIENTO</span>
+    </h1>
+    <p class="hero-sub">
+      Mejora tu <strong>salud física y mental</strong> con rutinas personalizadas basadas en ciencia del deporte y psicología del rendimiento.
+    </p>
+    <div class="hero-pills">
+      <span class="badge badge-blue">🏃 Condición física</span>
+      <span class="badge badge-purple">🧠 Salud mental</span>
+      <span class="badge badge-green">😴 Recuperación</span>
+      <span class="badge badge-blue">📊 Seguimiento</span>
+    </div>
+    <div class="hero-cta">
+      <button class="btn btn-blue btn-lg" onclick="startApp()">▶ Crear mi rutina personalizada</button>
+      <button class="btn btn-ghost btn-lg" onclick="document.getElementById('blog-sec').scrollIntoView({behavior:'smooth'})">Leer más ↓</button>
+    </div>
+    <div class="hero-disclaimer">
+      <strong>⚠️ Herramienta complementaria:</strong> APEX no reemplaza la consulta con un especialista en salud deportiva o psicológica. Para diagnósticos o condiciones específicas, acude siempre a un profesional certificado.
+    </div>
+  </div>
+
+  <!-- STATS STRIP -->
+  <div class="stats-strip">
+    <div class="stat-cell"><div class="stat-num blue">30%</div><div class="stat-lbl">Mejora en concentración con ejercicio regular</div></div>
+    <div class="stat-cell"><div class="stat-num green">2x</div><div class="stat-lbl">Más resiliencia con hábitos de bienestar</div></div>
+    <div class="stat-cell"><div class="stat-num purple">68%</div><div class="stat-lbl">Reducción de ansiedad con movimiento diario</div></div>
+    <div class="stat-cell"><div class="stat-num yellow">7min</div><div class="stat-lbl">De actividad física ya activan endorfinas</div></div>
+  </div>
+
+  <!-- BLOG SECTION -->
+  <div class="blog-section" id="blog-sec">
+    <div class="blog-inner">
+      <div class="blog-header">
+        <div>
+          <span class="section-label">Conocimiento</span>
+          <h2 class="section-title">Ciencia del <span class="accent">bienestar</span></h2>
+          <div class="divider divider-blue"></div>
+        </div>
+        <span class="badge badge-blue">Basado en evidencia</span>
+      </div>
+      <div class="blog-grid">
+
+        <!-- Featured -->
+        <div class="blog-card featured" onclick="openBlog('physical')">
+          <div class="blog-card-img physical">🏋️</div>
+          <div class="blog-body">
+            <div class="blog-cat phy">Salud Física</div>
+            <div class="blog-title">Por qué el ejercicio es el mejor potenciador del rendimiento académico</div>
+            <div class="blog-excerpt">Estudios de la Universidad de Harvard demuestran que 20 minutos de actividad aeróbica diaria aumentan el BDNF (factor neurotrófico derivado del cerebro), mejorando memoria, atención y velocidad de procesamiento hasta por 3 horas después del ejercicio.</div>
+            <div class="blog-meta"><span>Salud deportiva</span><div class="blog-dot"></div><span>5 min lectura</span></div>
+          </div>
+        </div>
+
+        <!-- Mental -->
+        <div class="blog-card" onclick="openBlog('mental')">
+          <div class="blog-card-img mental">🧠</div>
+          <div class="blog-body">
+            <div class="blog-cat men">Salud Mental</div>
+            <div class="blog-title">Gestión del estrés académico: qué funciona realmente</div>
+            <div class="blog-excerpt">El estrés crónico reduce el volumen del hipocampo — el centro de la memoria. Las técnicas de mindfulness y respiración pueden revertirlo en semanas.</div>
+            <div class="blog-meta"><span>Psicología</span><div class="blog-dot"></div><span>4 min</span></div>
+          </div>
+        </div>
+
+        <!-- Sleep -->
+        <div class="blog-card" onclick="openBlog('sleep')">
+          <div class="blog-card-img sleep">😴</div>
+          <div class="blog-body">
+            <div class="blog-cat slp">Recuperación</div>
+            <div class="blog-title">El sueño: el entrenamiento invisible que estás perdiendo</div>
+            <div class="blog-excerpt">Dormir menos de 7 horas reduce la consolidación de memoria en un 40% y eleva el cortisol. La recuperación es tan importante como el esfuerzo.</div>
+            <div class="blog-meta"><span>Neurofisiología</span><div class="blog-dot"></div><span>3 min</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Second row -->
+      <div class="blog-grid" style="margin-top:1.5rem;grid-template-columns:1fr 1fr 1fr">
+        <div class="blog-card" onclick="openBlog('nutrition')">
+          <div class="blog-card-img nutrition" style="height:120px;font-size:2.5rem">🥗</div>
+          <div class="blog-body">
+            <div class="blog-cat nut">Nutrición</div>
+            <div class="blog-title">Alimentación e inteligencia: cómo lo que comes afecta tu mente</div>
+            <div class="blog-excerpt">El cerebro consume 20% de tu energía. Los ácidos grasos omega-3 y la hidratación impactan directamente la función cognitiva.</div>
+            <div class="blog-meta"><span>Nutrición deportiva</span><div class="blog-dot"></div><span>3 min</span></div>
+          </div>
+        </div>
+        <div class="blog-card" onclick="openBlog('habits')">
+          <div class="blog-card-img physical" style="height:120px;font-size:2.5rem">🔄</div>
+          <div class="blog-body">
+            <div class="blog-cat phy">Hábitos</div>
+            <div class="blog-title">La regla de los 21 días y la ciencia real detrás de los hábitos</div>
+            <div class="blog-excerpt">Formar un hábito toma entre 18 y 254 días según el MIT. Conoce las estrategias basadas en evidencia para que los tuyos duren.</div>
+            <div class="blog-meta"><span>Psicología del comportamiento</span><div class="blog-dot"></div><span>4 min</span></div>
+          </div>
+        </div>
+        <div class="blog-card" onclick="openBlog('anxiety')">
+          <div class="blog-card-img mental" style="height:120px;font-size:2.5rem">💭</div>
+          <div class="blog-body">
+            <div class="blog-cat men">Ansiedad</div>
+            <div class="blog-title">Ansiedad precompetitiva: cómo convertirla en combustible</div>
+            <div class="blog-excerpt">Los atletas de élite no eliminan los nervios — los reencuadran. Aprende a usar la activación fisiológica a tu favor con técnicas cognitivas.</div>
+            <div class="blog-meta"><span>Psicología del deporte</span><div class="blog-dot"></div><span>4 min</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SECTION -->
+  <div class="data-section">
+    <div class="data-inner">
+      <span class="section-label">Evidencia científica</span>
+      <h2 class="section-title">Datos que <span class="accent-g">importan</span></h2>
+      <div class="divider divider-green"></div>
+      <div class="data-grid">
+        <div class="data-card dc-blue">
+          <div class="data-icon">🏃</div>
+          <div class="data-headline blue">23%</div>
+          <p class="data-desc">Los estudiantes físicamente activos obtienen calificaciones un 23% más altas en promedio que sus pares sedentarios, según estudios de la OMS.</p>
+          <div class="data-source">Fuente: OMS, 2022 — Global Action Plan on Physical Activity</div>
+        </div>
+        <div class="data-card dc-green">
+          <div class="data-icon">🧠</div>
+          <div class="data-headline green">89%</div>
+          <p class="data-desc">De los estudiantes de bachillerato reportan niveles altos de estrés. El manejo psicológico activo puede reducir síntomas en 6 semanas.</p>
+          <div class="data-source">Fuente: APA (American Psychological Association), 2023</div>
+        </div>
+        <div class="data-card dc-purple">
+          <div class="data-icon">😴</div>
+          <div class="data-headline purple">66%</div>
+          <p class="data-desc">De adolescentes duermen menos de las 8–10 horas recomendadas. Cada hora faltante reduce la retención de información hasta un 16%.</p>
+          <div class="data-source">Fuente: National Sleep Foundation, 2023</div>
+        </div>
+        <div class="data-card dc-blue">
+          <div class="data-icon">🌬️</div>
+          <div class="data-headline blue">4 min</div>
+          <p class="data-desc">De respiración diafragmática profunda activa el sistema nervioso parasimpático y reduce el cortisol en sangre de manera medible.</p>
+          <div class="data-source">Fuente: Journal of Clinical Psychology, 2021</div>
+        </div>
+        <div class="data-card dc-green">
+          <div class="data-icon">🤸</div>
+          <div class="data-headline green">30 min</div>
+          <p class="data-desc">De ejercicio aeróbico moderado 3 veces por semana equivale, en efectividad para el estado de ánimo, a medicación antidepresiva en casos leves-moderados.</p>
+          <div class="data-source">Fuente: JAMA Psychiatry, Meta-análisis 2023</div>
+        </div>
+        <div class="data-card dc-purple">
+          <div class="data-icon">📱</div>
+          <div class="data-headline purple">2.5h</div>
+          <p class="data-desc">Es el tiempo promedio diario de redes sociales de un adolescente colombiano. Reducirlo 30 min mejora el bienestar subjetivo significativamente.</p>
+          <div class="data-source">Fuente: DataReportal Colombia, 2024</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA SECTION -->
+  <div class="cta-section">
+    <div class="cta-inner">
+      <span class="section-label">Empieza hoy</span>
+      <h2 class="section-title">Tu semana de <span class="accent">alto rendimiento</span> comienza aquí</h2>
+      <p style="color:var(--text-muted);margin:1rem 0 2rem;font-size:1rem">Responde el formulario, recibe tu rutina personalizada y sigue tu progreso durante 7 días.</p>
+      <button class="btn btn-blue btn-lg" onclick="startApp()">▶ Crear mi rutina personalizada</button>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:1rem">Gratis · Sin datos sensibles · Herramienta complementaria</p>
+    </div>
+  </div>
+
+  <footer class="home-footer">
+    <p>APEX Rendimiento Integral · Colegio San Bartolomé La Merced · Bachillerato 11° · 2025</p>
+    <p style="margin-top:0.4rem">⚠️ Esta herramienta es de orientación general. Para atención especializada consulta a un profesional de salud deportiva o psicológica.</p>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: BLOG ARTICLE (modal-style)
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-blog">
+  <div class="page-wrap">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('home')" style="margin-bottom:1.5rem">← Volver</button>
+    <div id="blog-content"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: AUTH
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-auth">
+  <div class="auth-box">
+    <div class="auth-logo">APEX</div>
+    <div class="auth-subtitle">Rendimiento Integral · San Bartolomé</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" id="tab-register" onclick="showAuthTab('register')">Registrarse</button>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+
+    <!-- LOGIN -->
+    <div id="form-login">
+      <div class="field">
+        <label>Correo electrónico</label>
+        <input type="email" id="login-email" placeholder="tu@correo.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-blue btn-full" onclick="doLogin()">Iniciar sesión</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="form-register" style="display:none">
+      <div class="field">
+        <label>Nombre completo <span>*</span></label>
+        <input type="text" id="reg-name" placeholder="Tu nombre">
+      </div>
+      <div class="field">
+        <label>Correo electrónico <span>*</span></label>
+        <input type="email" id="reg-email" placeholder="tu@correo.com">
+      </div>
+      <div class="field">
+        <label>Contraseña <span>*</span></label>
+        <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="field">
+        <label>Código de acceso (si tienes uno)</label>
+        <input type="text" id="reg-code" placeholder="Ej: SBADMIN2025">
+      </div>
+      <button class="btn btn-green btn-full" onclick="doRegister()">Crear cuenta</button>
+    </div>
+
+    <div class="auth-sep">—</div>
+    <div class="auth-back"><a onclick="showScreen('home')">← Volver al inicio</a></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: FORM
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-form">
+  <div class="page-wrap">
+    <div style="margin-bottom:2rem">
+      <span class="section-label">Evaluación inicial</span>
+      <h2 class="section-title">Tu perfil de <span class="accent">rendimiento</span></h2>
+      <div class="divider divider-blue"></div>
+      <p style="color:var(--text-muted);font-size:0.9rem">Responde con honestidad. Tus respuestas generan una rutina 100% personalizada para ti.</p>
+    </div>
+
+    <!-- FÍSICA -->
+    <div class="form-section-hdr">🏃 Estado Físico Actual</div>
+
+    <div class="field">
+      <label>Nivel de energía hoy <span>*</span></label>
+      <div class="scale-row" id="s-energia"></div>
+      <div class="scale-labels"><span>Sin energía</span><span>Lleno de energía</span></div>
+    </div>
+    <div class="field">
+      <label>Días de actividad física a la semana <span>*</span></label>
+      <select id="sel-dias">
+        <option value="">Selecciona...</option>
+        <option value="0">Ninguno</option>
+        <option value="1">1 día</option>
+        <option value="2">2 días</option>
+        <option value="3">3 días</option>
+        <option value="4">4 o más</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Situaciones físicas actuales (selecciona las que apliquen)</label>
+      <div class="check-group" id="chk-fis">
+        <div class="check-item" data-v="ninguna"><div class="chk"></div><span>Sin limitaciones</span></div>
+        <div class="check-item" data-v="espalda"><div class="chk"></div><span>Dolor de espalda o mala postura</span></div>
+        <div class="check-item" data-v="cansancio"><div class="chk"></div><span>Fatiga o cansancio frecuente</span></div>
+        <div class="check-item" data-v="sedentario"><div class="chk"></div><span>Mucho tiempo sentado, poco movimiento</span></div>
+        <div class="check-item" data-v="tension"><div class="chk"></div><span>Tensión muscular (cuello, hombros)</span></div>
+        <div class="check-item" data-v="sueno_malo"><div class="chk"></div><span>Dificultad para dormir</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Calidad del sueño esta semana <span>*</span></label>
+      <div class="scale-row" id="s-sueno"></div>
+      <div class="scale-labels"><span>Muy mala</span><span>Excelente</span></div>
+    </div>
+
+    <!-- PSICOLÓGICA -->
+    <div class="form-section-hdr">🧠 Estado Psicológico</div>
+
+    <div class="field">
+      <label>Nivel de estrés esta semana <span>*</span></label>
+      <div class="scale-row" id="s-estres"></div>
+      <div class="scale-labels"><span>Sin estrés</span><span>Estrés muy alto</span></div>
+    </div>
+    <div class="field">
+      <label>Estado de ánimo general <span>*</span></label>
+      <div class="scale-row" id="s-animo"></div>
+      <div class="scale-labels"><span>Muy bajo</span><span>Muy positivo</span></div>
+    </div>
+    <div class="field">
+      <label>Aspectos psicológicos a trabajar</label>
+      <div class="check-group" id="chk-psi">
+        <div class="check-item" data-v="ok"><div class="chk"></div><span>Me siento bien en general</span></div>
+        <div class="check-item" data-v="concentracion"><div class="chk"></div><span>Concentración y foco</span></div>
+        <div class="check-item" data-v="ansiedad"><div class="chk"></div><span>Ansiedad (exámenes, futuro)</span></div>
+        <div class="check-item" data-v="motivacion"><div class="chk"></div><span>Motivación y propósito</span></div>
+        <div class="check-item" data-v="autoestima"><div class="chk"></div><span>Autoestima y confianza</span></div>
+        <div class="check-item" data-v="tiempo"><div class="chk"></div><span>Gestión del tiempo</span></div>
+        <div class="check-item" data-v="relaciones"><div class="chk"></div><span>Relaciones interpersonales</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Tiempo libre real al día</label>
+      <select id="sel-tiempo">
+        <option value="">Selecciona...</option>
+        <option value="poco">Menos de 30 min</option>
+        <option value="medio">30–60 min</option>
+        <option value="bastante">1–2 horas</option>
+        <option value="mucho">Más de 2 horas</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>¿Qué quieres mejorar esta semana? (opcional)</label>
+      <textarea id="txt-meta" placeholder="Ej: quiero dormir mejor, manejar el estrés de los parciales, sentirme con más energía..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="goHome()">← Volver</button>
+      <button class="btn btn-blue btn-lg" onclick="submitForm()">Generar rutina ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: LOADING
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-loading">
+  <div class="loader-ring"></div>
+  <div class="loader-title" id="load-title">Analizando tu perfil...</div>
+  <p class="loader-sub" id="load-sub">Creando tu semana de alto rendimiento</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: ROUTINE
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-routine">
+  <div class="page-wrap">
+    <div class="routine-hdr">
+      <h2 id="rout-title">SEMANA APEX</h2>
+      <div class="routine-meta-row">
+        <span class="badge badge-blue" id="rout-meta">Rutina personalizada</span>
+        <span class="badge badge-green">7 días · Bajo riesgo</span>
+      </div>
+    </div>
+    <div class="week-prog-box">
+      <div class="week-prog-top">
+        <span>Progreso semanal</span>
+        <strong id="prog-pct">0%</strong>
+      </div>
+      <div class="prog-track"><div class="prog-fill prog-green" id="prog-bar" style="width:0%"></div></div>
+    </div>
+    <div id="days-container"></div>
+    <div class="routine-quote" id="rout-quote"></div>
+    <div class="routine-actions">
+      <button class="btn btn-ghost" onclick="resetRoutine()">↺ Nueva semana</button>
+      <button class="btn btn-purple" onclick="goToReview()">Finalizar semana → Ver progreso</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: REVIEW
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-review">
+  <div class="page-wrap">
+    <div style="margin-bottom:2rem">
+      <span class="section-label">Evaluación final</span>
+      <h2 class="section-title">¿Cómo te sientes <span class="accent-g">ahora</span>?</h2>
+      <div class="divider divider-green"></div>
+      <p style="color:var(--text-muted);font-size:0.9rem">Completaste una semana APEX. Evalúa tu estado para ver tu progreso real.</p>
+    </div>
+
+    <div class="form-section-hdr">🏃 Estado Físico Ahora</div>
+    <div class="field">
+      <label>Nivel de energía ahora</label>
+      <div class="scale-row" id="r-s-energia"></div>
+      <div class="scale-labels"><span>Sin energía</span><span>Lleno de energía</span></div>
+    </div>
+    <div class="field">
+      <label>Calidad del sueño esta semana</label>
+      <div class="scale-row" id="r-s-sueno"></div>
+      <div class="scale-labels"><span>Muy mala</span><span>Excelente</span></div>
+    </div>
+
+    <div class="form-section-hdr">🧠 Estado Psicológico Ahora</div>
+    <div class="field">
+      <label>Nivel de estrés esta semana</label>
+      <div class="scale-row" id="r-s-estres"></div>
+      <div class="scale-labels"><span>Sin estrés</span><span>Estrés muy alto</span></div>
+    </div>
+    <div class="field">
+      <label>Estado de ánimo ahora</label>
+      <div class="scale-row" id="r-s-animo"></div>
+      <div class="scale-labels"><span>Muy bajo</span><span>Muy positivo</span></div>
+    </div>
+
+    <div class="form-section-hdr">📝 Reflexión</div>
+    <div class="field">
+      <label>¿Cuál fue tu mayor aprendizaje o cambio esta semana?</label>
+      <textarea id="r-reflexion" placeholder="Escribe libremente..."></textarea>
+    </div>
+    <div class="field">
+      <label>¿Qué actividades completaste mejor?</label>
+      <textarea id="r-logros" placeholder="Ej: los ejercicios de respiración, las caminatas..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="showScreen('routine')">← Volver</button>
+      <button class="btn btn-green btn-lg" onclick="submitReview()">Ver mi progreso ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: RESULTS
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-results">
+  <div class="page-wrap">
+    <div class="results-hero-sec">
+      <div class="big-score" id="res-score">--/--</div>
+      <div style="font-size:0.72rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-muted)">Actividades completadas</div>
+      <div class="results-title" id="res-title">Tu semana APEX</div>
+    </div>
+    <div class="compare-grid" id="compare-grid"></div>
+    <div class="ach-section">
+      <h3>▶ Tus logros y observaciones</h3>
+      <div id="ach-list"></div>
+    </div>
+    <div class="routine-quote" id="res-quote" style="margin-top:1.5rem"></div>
+    <div style="margin:2rem 0;padding:1rem 1.2rem;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.2);border-radius:10px;font-size:0.8rem;color:rgba(232,240,254,0.55);line-height:1.6">
+      <strong style="color:var(--red)">Recuerda:</strong> APEX es una herramienta de orientación complementaria. Si notaste dificultades persistentes o quieres profundizar en tu desarrollo, <strong style="color:var(--text)">consulta a un especialista en salud deportiva o psicológica.</strong>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="resetRoutine()">↺ Nueva semana</button>
+      <button class="btn btn-blue" onclick="showScreen('routine')">← Ver mi rutina</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCREEN: ADMIN
+══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-admin">
+  <div class="page-wrap-wide">
+    <div class="admin-header">
+      <h1>Panel Administrador</h1>
+      <span class="badge badge-purple">🔒 Acceso restringido</span>
+    </div>
+    <div class="admin-stats" id="admin-stats-grid">
+      <div class="admin-stat"><div class="admin-stat-num" id="stat-users">0</div><div class="admin-stat-lbl">Usuarios registrados</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="stat-active" style="color:var(--green)">0</div><div class="admin-stat-lbl">Con rutina activa</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="stat-completed" style="color:var(--purple-light)">0</div><div class="admin-stat-lbl">Semanas completadas</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="stat-avg-prog" style="color:var(--yellow)">0%</div><div class="admin-stat-lbl">Progreso promedio</div></div>
+    </div>
+    <div class="admin-search">
+      <input type="text" id="admin-search-input" placeholder="🔍 Buscar por nombre o correo..." oninput="filterAdminTable()">
+      <button class="btn btn-ghost btn-sm" onclick="renderAdmin()">↺ Actualizar</button>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="admin-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Registro</th>
+            <th>Rutina</th>
+            <th>Progreso</th>
+            <th>Última actividad</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="admin-tbody"></tbody>
+      </table>
+      <div class="admin-empty" id="admin-empty" style="display:none">No hay usuarios registrados aún.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════
+const ADMIN_CODE = 'SBADMIN2025';
+
+// ════════════════════════════════════════════════
+// SESSION STATE
+// ════════════════════════════════════════════════
+let session = { user: null }; // { uid, name, email, isAdmin }
+let appState = { form: {}, routine: null, progress: {}, review: {} };
+
+// ════════════════════════════════════════════════
+// STORAGE HELPERS
+// ════════════════════════════════════════════════
+async function stGet(key, shared=false) {
+  try { const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function stSet(key, val, shared=false) {
+  try { await window.storage.set(key, JSON.stringify(val), shared); } catch(e){}
+}
+async function stDel(key, shared=false) {
+  try { await window.storage.delete(key, shared); } catch(e){}
+}
+async function stList(prefix='', shared=false) {
+  try { const r = await window.storage.list(prefix, shared); return r ? r.keys : []; }
+  catch(e){ return []; }
+}
+
+// ════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goHome(){ showScreen('home'); }
+
+// ════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════
+let toastT;
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast toast-${type} show`;
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+function buildScale(id) {
+  const el = document.getElementById(id); if(!el) return;
+  el.innerHTML='';
+  for(let i=1;i<=5;i++){
+    const b=document.createElement('button');
+    b.className='scale-btn';b.textContent=i;b.dataset.v=i;
+    b.onclick=()=>{el.querySelectorAll('.scale-btn').forEach(x=>x.classList.remove('sel'));b.classList.add('sel')};
+    el.appendChild(b);
+  }
+}
+function getScale(id){ const s=document.querySelector(`#${id} .scale-btn.sel`); return s?+s.dataset.v:null; }
+
+function buildChecks(id){
+  document.querySelectorAll(`#${id} .check-item`).forEach(item=>{
+    item.onclick=()=>{
+      item.classList.toggle('sel');
+      item.querySelector('.chk').textContent=item.classList.contains('sel')?'✓':'';
+    };
+  });
+}
+function getChecks(id){ return Array.from(document.querySelectorAll(`#${id} .check-item.sel`)).map(i=>i.dataset.v); }
+
+// ════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════
+function showAuthTab(tab) {
+  document.getElementById('form-login').style.display = tab==='login'?'':'none';
+  document.getElementById('form-register').style.display = tab==='register'?'':'none';
+  document.getElementById('tab-login').className = 'auth-tab'+(tab==='login'?' active':'');
+  document.getElementById('tab-register').className = 'auth-tab'+(tab==='register'?' active':'');
+  document.getElementById('auth-error').style.display='none';
+  showScreen('auth');
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('auth-error');
+
+  if(!email||!pass){ errEl.textContent='Completa todos los campos.';errEl.style.display='';return; }
+
+  const users = await stGet('users-index', true) || {};
+  const uid = users[email];
+  if(!uid){ errEl.textContent='No existe una cuenta con ese correo.';errEl.style.display='';return; }
+
+  const userData = await stGet('user-'+uid, true);
+  if(!userData||userData.passHash!==simpleHash(pass)){ errEl.textContent='Contraseña incorrecta.';errEl.style.display='';return; }
+
+  session.user = { uid, name: userData.name, email: userData.email, isAdmin: userData.isAdmin||false };
+  await loadUserState();
+  updateTopbar();
+  toast(`¡Bienvenido/a, ${userData.name.split(' ')[0]}! 👋`);
+
+  if(appState.routine) showScreen('routine');
+  else showScreen('home');
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass = document.getElementById('reg-pass').value;
+  const code = document.getElementById('reg-code').value.trim();
+  const errEl = document.getElementById('auth-error');
+
+  if(!name||!email||!pass){ errEl.textContent='Completa nombre, correo y contraseña.';errEl.style.display='';return; }
+  if(pass.length<6){ errEl.textContent='La contraseña debe tener al menos 6 caracteres.';errEl.style.display='';return; }
+
+  const users = await stGet('users-index', true) || {};
+  if(users[email]){ errEl.textContent='Ya existe una cuenta con ese correo.';errEl.style.display='';return; }
+
+  const uid = 'u-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const isAdmin = code === ADMIN_CODE;
+
+  users[email] = uid;
+  await stSet('users-index', users, true);
+  await stSet('user-'+uid, {
+    uid, name, email, isAdmin,
+    passHash: simpleHash(pass),
+    createdAt: new Date().toISOString()
+  }, true);
+
+  session.user = { uid, name, email, isAdmin };
+  appState = { form:{}, routine:null, progress:{}, review:{} };
+  updateTopbar();
+  toast(isAdmin ? '¡Cuenta de administrador creada! 🔒' : '¡Cuenta creada! Bienvenido/a 🎉');
+  showScreen('home');
+}
+
+function simpleHash(str) {
+  let h=5381;
+  for(let i=0;i<str.length;i++) h=((h<<5)+h)+str.charCodeAt(i);
+  return (h>>>0).toString(36);
+}
+
+async function logout() {
+  session.user = null;
+  appState = { form:{}, routine:null, progress:{}, review:{} };
+  updateTopbar();
+  showScreen('home');
+  toast('Sesión cerrada','info');
+}
+
+function updateTopbar() {
+  const u = session.user;
+  const authEl = document.getElementById('topbar-auth');
+  const userEl = document.getElementById('topbar-user');
+  const navRoutine = document.getElementById('nav-routine');
+  const navAdmin = document.getElementById('nav-admin');
+
+  if(u) {
+    authEl.style.display='none';
+    userEl.style.display='flex';
+    document.getElementById('topbar-avatar').textContent = u.name[0].toUpperCase();
+    document.getElementById('topbar-name').textContent = u.name.split(' ')[0];
+    navRoutine.style.display = appState.routine ? '' : 'none';
+    navAdmin.style.display = u.isAdmin ? '' : 'none';
+  } else {
+    authEl.style.display='flex';
+    userEl.style.display='none';
+    navRoutine.style.display='none';
+    navAdmin.style.display='none';
+  }
+}
+
+// ════════════════════════════════════════════════
+// USER STATE PERSISTENCE
+// ════════════════════════════════════════════════
+async function loadUserState() {
+  if(!session.user) return;
+  const saved = await stGet('state-'+session.user.uid, true);
+  if(saved) appState = saved;
+}
+
+async function saveUserState() {
+  if(!session.user) return;
+  await stSet('state-'+session.user.uid, appState, true);
+  // Update user's last activity and progress snapshot
+  const userData = await stGet('user-'+session.user.uid, true);
+  if(userData) {
+    userData.lastActive = new Date().toISOString();
+    userData.hasRoutine = !!appState.routine;
+    userData.routineTitle = appState.routine?.titulo || '';
+    // calc progress pct
+    let total=0,done=0;
+    if(appState.routine) {
+      appState.routine.dias.forEach((d,di)=>{
+        const p=appState.progress[di]||{};
+        d.actividades.forEach((_,ai)=>{total++;if(p[ai])done++;});
+      });
+    }
+    userData.progressPct = total ? Math.round((done/total)*100) : 0;
+    userData.weeksDone = (userData.weeksDone||0) + (appState.review?.submitted ? 1 : 0);
+    await stSet('user-'+session.user.uid, userData, true);
+  }
+}
+
+// ════════════════════════════════════════════════
+// START APP (form or login gate)
+// ════════════════════════════════════════════════
+function startApp() {
+  if(!session.user) { showAuthTab('login'); return; }
+  initFormUI();
+  showScreen('form');
+}
+
+// ════════════════════════════════════════════════
+// FORM UI
+// ════════════════════════════════════════════════
+function initFormUI() {
+  buildScale('s-energia');buildScale('s-sueno');
+  buildScale('s-estres');buildScale('s-animo');
+  buildChecks('chk-fis');buildChecks('chk-psi');
+}
+
+async function submitForm() {
+  const e=getScale('s-energia'),su=getScale('s-sueno'),
+        es=getScale('s-estres'),an=getScale('s-animo'),
+        dias=document.getElementById('sel-dias').value;
+  if(!e||!su||!es||!an||!dias){ toast('Completa todos los campos obligatorios','error');return; }
+
+  appState.form = {
+    energia:e, sueno:su, estres:es, animo:an,
+    dias, condFis:getChecks('chk-fis'),
+    aspectPsi:getChecks('chk-psi'),
+    tiempo:document.getElementById('sel-tiempo').value,
+    meta:document.getElementById('txt-meta').value
+  };
+  appState.progress = {};
+  appState.review = {};
+  showScreen('loading');
+  await generateRoutine();
+}
+
+// ════════════════════════════════════════════════
+// CLAUDE API
+// ════════════════════════════════════════════════
+async function generateRoutine() {
+  const f = appState.form;
+  const msgs = ['Analizando tu perfil…','Diseñando actividades…','Ajustando intensidades…','Optimizando tu semana…','¡Casi listo!'];
+  let mi=0;
+  const tick = setInterval(()=>{ if(mi<msgs.length-1)mi++; document.getElementById('load-title').textContent=msgs[mi]; },1100);
+
+  const prompt=`Eres un experto en ciencia del deporte y psicología del rendimiento para adolescentes de bachillerato (grado 11).
+
+Perfil del estudiante:
+- Energía: ${f.energia}/5
+- Sueño: ${f.sueno}/5
+- Estrés: ${f.estres}/5 (5=muy alto)
+- Ánimo: ${f.animo}/5
+- Días de ejercicio semanal: ${f.dias}
+- Condiciones físicas: ${f.condFis?.join(', ')||'ninguna'}
+- Aspectos psicológicos a trabajar: ${f.aspectPsi?.join(', ')||'ninguno'}
+- Tiempo libre diario: ${f.tiempo||'medio'}
+- Meta personal: ${f.meta||'mejorar rendimiento general'}
+
+Genera una rutina semanal de 7 días personalizada basada ESTRICTAMENTE en ciencia del deporte y psicología del rendimiento (sin referencias religiosas o espirituales).
+
+REGLAS:
+1. Actividades de BAJO RIESGO sin equipamiento especial ni contacto físico intenso
+2. NO especializadas en ningún deporte ni condición clínica
+3. Basadas en evidencia científica (neurofisiología, psicología cognitiva, kinesiología)
+4. Incluye mezcla de: ejercicio físico suave/moderado, técnicas psicológicas (mindfulness, cognitivo-conductual), higiene del sueño, nutrición básica, gestión del estrés
+5. Adaptadas al tiempo libre disponible
+6. Título motivador de 3-4 palabras en mayúsculas relacionado con rendimiento
+
+Responde SOLO en JSON válido sin markdown:
+{
+  "titulo": "SEMANA DE ALTO RENDIMIENTO",
+  "meta_semana": "objetivo de la semana en 1 frase",
+  "cita": {"texto": "dato o frase científica motivadora", "fuente": "Institución o autor científico"},
+  "dias": [
+    {
+      "nombre": "Lunes",
+      "enfoque": "Nombre del enfoque del día",
+      "actividades": [
+        {
+          "tipo": "fisica" o "psicologica" o "recuperacion",
+          "nombre": "Nombre",
+          "descripcion": "Instrucción clara y práctica (2-3 oraciones)",
+          "duracion": "X minutos",
+          "icono": "emoji"
+        }
+      ]
+    }
+  ]
+}
+7 días exactos. 3-5 actividades por día. Tiempo total diario ajustado al tiempo libre disponible.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    });
+    clearInterval(tick);
+    const data = await res.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    appState.routine = JSON.parse(text.replace(/```json|```/g,'').trim());
+  } catch(e) {
+    clearInterval(tick);
+    appState.routine = getFallback();
+  }
+
+  await saveUserState();
+  renderRoutine();
+  updateTopbar();
+  showScreen('routine');
+}
+
+// ════════════════════════════════════════════════
+// RENDER ROUTINE
+// ════════════════════════════════════════════════
+function renderRoutine() {
+  const r = appState.routine;
+  document.getElementById('rout-title').textContent = r.titulo;
+  document.getElementById('rout-meta').textContent = r.meta_semana;
+  document.getElementById('rout-quote').innerHTML = `"${r.cita.texto}"<cite>${r.cita.fuente}</cite>`;
+
+  const container = document.getElementById('days-container');
+  container.innerHTML='';
+
+  r.dias.forEach((day,di)=>{
+    const prog = appState.progress[di]||{};
+    const allDone = day.actividades.every((_,ai)=>prog[ai]);
+    const card=document.createElement('div');
+    card.className=`day-card${allDone?' day-done':''}`;
+    card.id=`dc-${di}`;
+    card.innerHTML=`
+      <div class="day-hdr" onclick="toggleDay(${di})">
+        <div class="day-num">${di+1}</div>
+        <div class="day-info">
+          <div class="day-name">${day.nombre}</div>
+          <div class="day-focus">${day.enfoque}</div>
+        </div>
+        <div class="day-tick${allDone?' ticked':''}" id="dt-${di}" onclick="event.stopPropagation();markDay(${di})">${allDone?'✓':''}</div>
+        <div class="day-chev">▼</div>
+      </div>
+      <div class="day-body">
+        <ul class="act-list" id="al-${di}"></ul>
+      </div>`;
+    container.appendChild(card);
+
+    const list=document.getElementById(`al-${di}`);
+    day.actividades.forEach((act,ai)=>{
+      const done=prog[ai]||false;
+      const li=document.createElement('li');li.className='act-item';
+      const icoClass=act.tipo==='psicologica'?'psyc':act.tipo==='recuperacion'?'spir':'phys';
+      li.innerHTML=`
+        <div class="act-ico ${icoClass}">${act.icono}</div>
+        <div class="act-content">
+          <div class="act-name">${act.nombre}</div>
+          <div class="act-desc">${act.descripcion}</div>
+          <div class="act-check-btn${done?' ticked':''}" id="ac-${di}-${ai}" onclick="toggleAct(${di},${ai})">
+            ${done?'✓ Completado':'○ Marcar como hecho'}
+          </div>
+        </div>
+        <div class="act-dur">${act.duracion}</div>`;
+      list.appendChild(li);
+    });
+  });
+  updateProgress();
+}
+
+function toggleDay(di){
+  document.getElementById(`dc-${di}`).classList.toggle('open');
+}
+
+async function toggleAct(di,ai){
+  if(!appState.progress[di]) appState.progress[di]={};
+  appState.progress[di][ai]=!appState.progress[di][ai];
+  const done=appState.progress[di][ai];
+  const btn=document.getElementById(`ac-${di}-${ai}`);
+  btn.className=`act-check-btn${done?' ticked':''}`;
+  btn.textContent=done?'✓ Completado':'○ Marcar como hecho';
+  updateDayStatus(di);
+  updateProgress();
+  await saveUserState();
+  if(done) toast('¡Actividad completada! 💪');
+}
+
+async function markDay(di){
+  const day=appState.routine.dias[di];
+  const prog=appState.progress[di]||{};
+  const allDone=day.actividades.every((_,ai)=>prog[ai]);
+  if(!appState.progress[di]) appState.progress[di]={};
+  day.actividades.forEach((_,ai)=>{ appState.progress[di][ai]=!allDone; });
+  renderRoutine();
+  await saveUserState();
+  toast(allDone?'Día desmarcado':'¡Día completo! 🔥');
+}
+
+function updateDayStatus(di){
+  const day=appState.routine.dias[di];
+  const prog=appState.progress[di]||{};
+  const done=day.actividades.every((_,ai)=>prog[ai]);
+  const card=document.getElementById(`dc-${di}`);
+  const tick=document.getElementById(`dt-${di}`);
+  if(card){ done?card.classList.add('day-done'):card.classList.remove('day-done'); }
+  if(tick){ tick.className=`day-tick${done?' ticked':''}`;tick.textContent=done?'✓':''; }
+}
+
+function updateProgress(){
+  if(!appState.routine) return;
+  let tot=0,dn=0;
+  appState.routine.dias.forEach((d,di)=>{ const p=appState.progress[di]||{}; d.actividades.forEach((_,ai)=>{tot++;if(p[ai])dn++;}); });
+  const pct=tot?Math.round((dn/tot)*100):0;
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('prog-bar').style.width=pct+'%';
+}
+
+async function resetRoutine(){
+  appState.routine=null;appState.progress={};appState.review={};
+  await saveUserState();
+  initFormUI();
+  showScreen('form');
+  updateTopbar();
+}
+
+// ════════════════════════════════════════════════
+// REVIEW & RESULTS
+// ════════════════════════════════════════════════
+function goToReview(){
+  ['r-s-energia','r-s-sueno','r-s-estres','r-s-animo'].forEach(buildScale);
+  showScreen('review');
+}
+
+async function submitReview(){
+  const e=getScale('r-s-energia'),su=getScale('r-s-sueno'),
+        es=getScale('r-s-estres'),an=getScale('r-s-animo');
+  if(!e||!su||!es||!an){ toast('Completa todas las escalas','error');return; }
+  appState.review={energia:e,sueno:su,estres:es,animo:an,
+    reflexion:document.getElementById('r-reflexion').value,
+    logros:document.getElementById('r-logros').value,
+    submitted:true};
+  await saveUserState();
+  renderResults();
+  showScreen('results');
+}
+
+function renderResults(){
+  const f=appState.form,rv=appState.review,r=appState.routine;
+  let tot=0,dn=0;
+  if(r) r.dias.forEach((d,di)=>{ const p=appState.progress[di]||{}; d.actividades.forEach((_,ai)=>{tot++;if(p[ai])dn++;}); });
+  const pct=tot?Math.round((dn/tot)*100):0;
+  document.getElementById('res-score').textContent=`${dn}/${tot}`;
+  document.getElementById('res-title').textContent=
+    pct>=90?'SEMANA DE ALTO RENDIMIENTO ALCANZADA':
+    pct>=70?'GRAN AVANCE EN TU RENDIMIENTO':
+    pct>=50?'UN PASO FIRME EN LA DIRECCIÓN CORRECTA':
+    'CADA INICIO ES EL PRIMER PASO';
+
+  const deltas=[
+    {l:'Energía',b:f.energia,a:rv.energia},
+    {l:'Sueño',b:f.sueno,a:rv.sueno},
+    {l:'Estrés',b:f.estres,a:rv.estres,inv:true},
+    {l:'Estado de Ánimo',b:f.animo,a:rv.animo}
+  ];
+  const grid=document.getElementById('compare-grid');grid.innerHTML='';
+  deltas.forEach(d=>{
+    let diff=d.a-d.b; if(d.inv)diff=-diff;
+    const raw=d.a-d.b;
+    const cls=diff>0?'delta-up':diff<0?'delta-down':'delta-same';
+    const arr=diff>0?'↑':diff<0?'↓':'→';
+    grid.innerHTML+=`<div class="compare-card"><h4>${d.l}</h4><div class="delta ${cls}">${arr} ${Math.abs(raw)} pts</div><div class="compare-detail">Antes: ${d.b}/5 → Ahora: ${d.a}/5</div></div>`;
+  });
+
+  const ach=document.getElementById('ach-list');ach.innerHTML='';
+  const items=[];
+  if(pct>=80) items.push({i:'🏆',t:`Completaste el ${pct}% de tu rutina. ¡Disciplina de alto rendimiento!`});
+  else if(pct>=50) items.push({i:'💪',t:`${pct}% completado. Cada actividad suma a tu rendimiento.`});
+  else items.push({i:'🌱',t:`${pct}% completado. Este es tu punto de partida — sigue adelante.`});
+  const eImp=rv.energia-f.energia;
+  if(eImp>0) items.push({i:'⚡',t:`Tu energía mejoró ${eImp} puntos. El movimiento y el descanso están funcionando.`});
+  const sImp=f.estres-rv.estres;
+  if(sImp>0) items.push({i:'🧘',t:`Tu estrés bajó ${sImp} puntos. Las técnicas de manejo del estrés tienen impacto real.`});
+  if(sImp<0) items.push({i:'⚠️',t:`Tu estrés subió. Es común en temporadas de exámenes. Considera apoyo profesional.`});
+  if(rv.reflexion) items.push({i:'📝',t:`Tu reflexión: "${rv.reflexion.substring(0,100)}${rv.reflexion.length>100?'…':''}"`});
+  if(rv.logros) items.push({i:'🎯',t:`Puntos fuertes: ${rv.logros.substring(0,100)}`});
+  items.push({i:'🔁',t:`Inicia una nueva semana y ajusta las actividades que más te costaron. El progreso es progresivo.`});
+  items.forEach(item=>{ ach.innerHTML+=`<div class="ach-item"><div class="ach-ico">${item.i}</div><div>${item.t}</div></div>`; });
+
+  const quotes=[
+    {t:'El cuerpo logra lo que la mente cree posible.',f:'Kenneth Cooper — Padre de la aeróbica'},
+    {t:'El rendimiento óptimo no es un evento, es un proceso diario.',f:'James Clear — Atomic Habits'},
+    {t:'La salud mental es la base de todo rendimiento sostenido.',f:'APA — American Psychological Association'}
+  ];
+  const q=quotes[Math.floor(Math.random()*quotes.length)];
+  document.getElementById('res-quote').innerHTML=`"${q.t}"<cite>${q.f}</cite>`;
+}
+
+// ════════════════════════════════════════════════
+// ADMIN PANEL
+// ════════════════════════════════════════════════
+let adminUsers = [];
+
+async function renderAdmin(){
+  if(!session.user?.isAdmin){ toast('Acceso denegado','error');return; }
+  showScreen('admin');
+
+  const idx = await stGet('users-index', true)||{};
+  const emails = Object.keys(idx);
+  adminUsers = [];
+
+  for(const email of emails){
+    const uid=idx[email];
+    const u=await stGet('user-'+uid, true);
+    if(u) adminUsers.push(u);
+  }
+
+  // Stats
+  const withRoutine = adminUsers.filter(u=>u.hasRoutine).length;
+  const withWeeks = adminUsers.filter(u=>(u.weeksDone||0)>0).length;
+  const avgProg = adminUsers.length ? Math.round(adminUsers.reduce((a,u)=>a+(u.progressPct||0),0)/adminUsers.length) : 0;
+
+  document.getElementById('stat-users').textContent=adminUsers.length;
+  document.getElementById('stat-active').textContent=withRoutine;
+  document.getElementById('stat-completed').textContent=withWeeks;
+  document.getElementById('stat-avg-prog').textContent=avgProg+'%';
+
+  renderAdminTable(adminUsers);
+}
+
+function renderAdminTable(users){
+  const tbody=document.getElementById('admin-tbody');
+  const empty=document.getElementById('admin-empty');
+  tbody.innerHTML='';
+  if(!users.length){ empty.style.display='';return; }
+  empty.style.display='none';
+  users.forEach(u=>{
+    const pct=u.progressPct||0;
+    const progColor=pct>=80?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+    const lastActive=u.lastActive?new Date(u.lastActive).toLocaleDateString('es-CO',{day:'2-digit',month:'short'}):'—';
+    const created=u.createdAt?new Date(u.createdAt).toLocaleDateString('es-CO',{day:'2-digit',month:'short'}):'—';
+    const statusBadge=u.isAdmin?'<span class="badge badge-purple">Admin</span>':
+      pct>=80?'<span class="badge badge-green">Activo</span>':
+      u.hasRoutine?'<span class="badge badge-blue">En progreso</span>':
+      '<span class="badge" style="background:var(--panel);color:var(--text-muted);border:1px solid var(--border)">Sin rutina</span>';
+    tbody.innerHTML+=`
+      <tr>
+        <td><strong>${u.name}</strong></td>
+        <td style="color:var(--text-muted)">${u.email}</td>
+        <td style="color:var(--text-muted)">${created}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem">${u.routineTitle||'—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <div class="prog-track" style="width:70px"><div class="prog-fill" style="width:${pct}%;background:${progColor}"></div></div>
+            <span style="font-size:0.78rem;color:${progColor};font-weight:600">${pct}%</span>
+          </div>
+        </td>
+        <td style="color:var(--text-muted)">${lastActive}</td>
+        <td>${statusBadge}</td>
+      </tr>`;
+  });
+}
+
+function filterAdminTable(){
+  const q=document.getElementById('admin-search-input').value.toLowerCase();
+  const filtered=adminUsers.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+  renderAdminTable(filtered);
+}
+
+// ════════════════════════════════════════════════
+// BLOG ARTICLES
+// ════════════════════════════════════════════════
+const blogs = {
+  physical:{
+    title:'Por qué el ejercicio es el mejor potenciador del rendimiento académico',
+    cat:'Salud Física',catClass:'badge-blue',
+    content:`
+      <p>Cuando hablamos de rendir mejor en el colegio, la mayoría piensa en estudiar más horas. Pero la neurociencia tiene algo diferente que decir.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">El BDNF: el fertilizante del cerebro</h3>
+      <p>El ejercicio aeróbico — caminar rápido, trotar, nadar, bailar — libera una proteína llamada BDNF (Factor Neurotrófico Derivado del Cerebro). Esta proteína favorece la creación de nuevas conexiones neuronales, especialmente en el hipocampo, la región cerebral responsable de la memoria y el aprendizaje. Estudios de la Universidad de Harvard muestran que el BDNF sube significativamente después de 20 minutos de actividad moderada y sus efectos duran hasta 3 horas.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">Qué dice la evidencia</h3>
+      <p>Un meta-análisis de más de 200 estudios publicado en el British Journal of Sports Medicine encontró que estudiantes físicamente activos obtienen mejores calificaciones, tienen mayor capacidad de atención sostenida y muestran mejor regulación emocional. No se necesita ser deportista de élite: 20-30 minutos de actividad moderada, 3-4 veces por semana, ya produce mejoras medibles.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">Cómo aplicarlo en tu vida</h3>
+      <p>No necesitas un gimnasio. Caminar 20 minutos antes de estudiar, hacer una rutina corta de movilidad articular al levantarte, o simplemente tomar las escaleras en vez del ascensor ya activa los mecanismos neurobiológicos que mejoran tu capacidad de aprender.</p>
+    `
+  },
+  mental:{
+    title:'Gestión del estrés académico: qué funciona realmente',
+    cat:'Salud Mental',catClass:'badge-purple',
+    content:`
+      <p>El estrés académico en grado 11 alcanza su punto máximo: ICFES, elección de carrera, presión familiar, redes sociales. Pero el estrés crónico no es solo incomodidad — tiene consecuencias neurobiológicas reales.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">Lo que el estrés le hace a tu cerebro</h3>
+      <p>Cuando el estrés es sostenido, el cortisol (hormona del estrés) daña las neuronas del hipocampo, reduciendo literalmente tu capacidad de memorizar. Además, activa la amígdala (el centro del miedo) en detrimento de la corteza prefrontal, que es donde reside el pensamiento lógico y la toma de decisiones.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">Técnicas basadas en evidencia</h3>
+      <p>La respiración diafragmática (inhalar 4 seg, sostener 4, exhalar 6) activa el nervio vago y reduce el cortisol en minutos. El mindfulness de atención plena, practicado 10 minutos diarios, muestra reducciones del 30-40% en ansiedad según estudios del MIT. La escritura expresiva — escribir sobre lo que te preocupa durante 15 minutos — reduce la carga cognitiva del estrés y libera recursos mentales para el aprendizaje.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">Lo que NO funciona</h3>
+      <p>Ignorar el estrés, distraerte con redes sociales (el scroll en realidad aumenta la ansiedad) o el exceso de cafeína. Estas estrategias dan alivio inmediato pero amplifican el problema a largo plazo.</p>
+    `
+  },
+  sleep:{
+    title:'El sueño: el entrenamiento invisible que estás perdiendo',
+    cat:'Recuperación',catClass:'badge-green',
+    content:`
+      <p>Si te quedas estudiando hasta las 2 AM creyendo que así retendrás más, la neurociencia te tiene malas noticias.</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">Qué pasa mientras duermes</h3>
+      <p>Durante el sueño de ondas lentas (fases 3 y 4), el cerebro transfiere la información del día de la memoria a corto plazo al almacenamiento de largo plazo. En el sueño REM, consolida habilidades motoras y conexiones emocionales. Dormir menos de 7 horas reduce este proceso en hasta un 40%, según el neurocientífico Matthew Walker (Universidad de Berkeley).</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">El efecto en el rendimiento</h3>
+      <p>Operar con déficit de sueño equivale cognitivamente a estar levemente intoxicado. La velocidad de procesamiento, la memoria de trabajo y la regulación emocional se deterioran. Irónicamente, estudiar cansado es mucho menos eficiente que descansar y estudiar 2 horas menos pero bien dormido.</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">Higiene del sueño práctica</h3>
+      <p>Mantén un horario constante (acostarte y levantarte a la misma hora, incluso fines de semana). Evita pantallas 45 minutos antes de dormir (la luz azul suprime la melatonina). Mantén el cuarto fresco (18-20°C es la temperatura óptima para dormir). Una siesta de 20 minutos después del almuerzo puede recuperar el foco por el resto del día.</p>
+    `
+  },
+  nutrition:{
+    title:'Alimentación e inteligencia: cómo lo que comes afecta tu mente',
+    cat:'Nutrición',catClass:'badge-green',
+    content:`
+      <p>El cerebro es el órgano más demandante de tu cuerpo: consume el 20% de toda tu energía aunque representa solo el 2% de tu peso. Lo que comes literalmente construye el material de tus neuronas.</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">Glucosa y función cognitiva</h3>
+      <p>El cerebro funciona principalmente con glucosa, pero no toda glucosa es igual. Los carbohidratos simples (azúcar, harinas refinadas) dan un pico de energía seguido de una caída que provoca fatiga mental. Los carbohidratos complejos (avena, frutas, leguminosas) mantienen niveles estables de glucosa, sosteniendo la concentración por más tiempo.</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">Omega-3 y neuroplasticidad</h3>
+      <p>Los ácidos grasos omega-3 (presentes en nueces, atún, sardinas, aguacate) son componentes estructurales de las membranas neuronales. Su consumo regular se asocia con mejor velocidad de procesamiento, mayor neuroplasticidad y reducción de inflamación cerebral.</p>
+      <h3 style="color:var(--green);margin:1.5rem 0 0.75rem">Hidratación y cognición</h3>
+      <p>Una deshidratación de apenas el 1-2% del peso corporal reduce la concentración y la memoria a corto plazo de manera medible. Beber 2 litros de agua al día no es solo saludable — es cognitivamente necesario.</p>
+    `
+  },
+  habits:{
+    title:'La regla de los 21 días y la ciencia real detrás de los hábitos',
+    cat:'Hábitos',catClass:'badge-blue',
+    content:`
+      <p>Has escuchado que "un hábito se forma en 21 días". Esta cifra viene de observaciones anecdóticas de un cirujano plástico en los años 60. La ciencia actual dice algo muy diferente.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">El estudio real</h3>
+      <p>Una investigación de University College London siguió a 96 personas durante 12 semanas y encontró que el tiempo para automatizar un comportamiento varía entre 18 y 254 días, con un promedio de 66 días. La duración depende del tipo de hábito (beber agua es más fácil que hacer ejercicio), de su consistencia y del contexto.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">Cómo funciona la formación de hábitos</h3>
+      <p>El neurocientífico Ann Graybiel (MIT) identificó el bucle del hábito: Señal → Rutina → Recompensa. Para instalar un hábito, necesitas una señal consistente (la misma hora, el mismo lugar), una rutina clara y una recompensa inmediata. El secreto es hacer el comportamiento lo más pequeño y automático posible al inicio.</p>
+      <h3 style="color:var(--blue);margin:1.5rem 0 0.75rem">Estrategias que funcionan</h3>
+      <p>El "empaquetamiento de hábitos" (combinar uno nuevo con uno establecido: "después de desayunar, hago 5 minutos de respiración") acelera la automatización. La reducción de fricción (tener la ropa deportiva lista la noche anterior) elimina el esfuerzo de decisión. Y el seguimiento del progreso activa el circuito de dopamina, motivándote a continuar.</p>
+    `
+  },
+  anxiety:{
+    title:'Ansiedad precompetitiva: cómo convertirla en combustible',
+    cat:'Psicología del Deporte',catClass:'badge-purple',
+    content:`
+      <p>Los nervios antes de un examen importante o una presentación no son una señal de debilidad — son tu sistema nervioso preparándote para dar lo mejor.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">La diferencia entre ansiedad y activación</h3>
+      <p>Fisiológicamente, la ansiedad y la emoción positiva tienen las mismas señales corporales: corazón acelerado, adrenalina, sudoración. La diferencia está en la interpretación. El psicólogo Alison Wood Brooks (Harvard) demostró que decirte a ti mismo "estoy emocionado" en vez de "estoy nervioso" mejora el rendimiento en tareas cognitivas y oratorias.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">La zona óptima de activación</h3>
+      <p>La psicología del deporte habla de la "zona de flujo óptimo": un nivel de activación ni demasiado bajo (aburrimiento, poca energía) ni demasiado alto (pánico, bloqueo). Los atletas de élite aprenden a regular su activación para mantenerse en esa zona. Técnicas como la respiración controlada, el habla interna positiva y las rutinas precompetitivas sirven exactamente para eso.</p>
+      <h3 style="color:var(--purple-light);margin:1.5rem 0 0.75rem">Técnicas concretas</h3>
+      <p>La "técnica del reencuadre": reinterpreta físicamente los síntomas de ansiedad como preparación. El "proceso focus": concentra tu atención en lo que puedes controlar (preparación, actitud, proceso) y no en el resultado. La visualización: imagínate ejecutando correctamente paso a paso, no solo el resultado final.</p>
+    `
+  }
+};
+
+function openBlog(key){
+  const b=blogs[key];
+  if(!b)return;
+  document.getElementById('blog-content').innerHTML=`
+    <span class="badge ${b.catClass}" style="margin-bottom:1rem;display:inline-flex">${b.cat}</span>
+    <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(1.6rem,3.5vw,2.5rem);color:var(--text);line-height:1.15;margin-bottom:1.5rem">${b.title}</h1>
+    <div style="font-size:0.95rem;color:var(--text-muted);line-height:1.85">${b.content}</div>
+    <div style="margin-top:2rem;padding:1rem;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.2);border-radius:10px;font-size:0.78rem;color:rgba(232,240,254,0.55)">
+      <strong style="color:var(--red)">Nota:</strong> Esta información es de carácter educativo general. Para diagnóstico o tratamiento de condiciones específicas, consulta a un profesional de la salud.
+    </div>`;
+  showScreen('blog');
+}
+
+// ════════════════════════════════════════════════
+// FALLBACK ROUTINE
+// ════════════════════════════════════════════════
+function getFallback(){
+  return {
+    titulo:'SEMANA DE FUNDAMENTOS',
+    meta_semana:'Construir hábitos base de movimiento, recuperación y gestión mental',
+    cita:{texto:'El cuerpo logra lo que la mente cree posible.',fuente:'Kenneth Cooper — Padre de la aeróbica'},
+    dias:[
+      {nombre:'Lunes',enfoque:'Activación y Energía',actividades:[
+        {tipo:'fisica',nombre:'Caminata de activación',descripcion:'Camina 15 minutos a ritmo moderado sin audífonos. Presta atención a tu respiración y a los sonidos del entorno. Ideal para empezar la semana con energía.',duracion:'15 min',icono:'🚶'},
+        {tipo:'fisica',nombre:'Movilidad articular',descripcion:'Haz círculos suaves con hombros, muñecas, cadera y tobillos (10 cada dirección). Activa tus articulaciones sin impacto ni rebotes.',duracion:'8 min',icono:'🔄'},
+        {tipo:'psicologica',nombre:'Intención del día',descripcion:'Escribe en papel una meta concreta para hoy. No una lista — una sola cosa prioritaria. Léela en voz alta antes de empezar el día.',duracion:'5 min',icono:'📝'},
+        {tipo:'recuperacion',nombre:'Respiración 4-6-8',descripcion:'Inhala 4 seg, sostén 4, exhala 6. Repite 6 veces. Activa el sistema nervioso parasimpático y reduce el cortisol en sangre.',duracion:'5 min',icono:'🌬️'}
+      ]},
+      {nombre:'Martes',enfoque:'Fuerza y Foco',actividades:[
+        {tipo:'fisica',nombre:'Cardio suave 20 min',descripcion:'Sube y baja escaleras durante 10 min, o trota en el lugar a ritmo cómodo. Mantén una intensidad donde puedas hablar sin ahogarte.',duracion:'20 min',icono:'🏃'},
+        {tipo:'fisica',nombre:'Fuerza corporal básica',descripcion:'3 series: 10 sentadillas, 8 flexiones de pared, 15 seg de plancha. Descansa 45 seg entre series. Sin impacto, sin equipamiento.',duracion:'15 min',icono:'💪'},
+        {tipo:'psicologica',nombre:'Técnica Pomodoro',descripcion:'25 minutos de estudio en silencio absoluto, 5 de descanso activo (muévete, no pantallas). Repite 2-3 ciclos. Registra qué lograste.',duracion:'60 min',icono:'⏱️'}
+      ]},
+      {nombre:'Miércoles',enfoque:'Recuperación Activa',actividades:[
+        {tipo:'recuperacion',nombre:'Estiramientos guiados',descripcion:'Estira isquiotibiales (pie apoyado, tronco hacia adelante 30 seg), cuádriceps, pectoral y cuello. Sin rebotes. Respira en cada posición.',duracion:'15 min',icono:'🧘'},
+        {tipo:'psicologica',nombre:'Diario de emociones',descripcion:'Escribe 5 minutos lo que has sentido esta semana. No edites, no juzgues — solo exprésate. La escritura expresiva reduce carga cognitiva.',duracion:'5 min',icono:'📖'},
+        {tipo:'recuperacion',nombre:'Higiene del sueño',descripcion:'Hoy, apaga pantallas 45 min antes de dormir. Lee algo que disfrutes o escucha música tranquila. Observa si tardas menos en dormirte.',duracion:'45 min',icono:'😴'}
+      ]},
+      {nombre:'Jueves',enfoque:'Mente Aguda',actividades:[
+        {tipo:'psicologica',nombre:'Mindfulness 5 sentidos',descripcion:'Siéntate 5 min: nombra 5 cosas que ves, 4 que escuchas, 3 que tocas, 2 que hueles, 1 que saboreas. Ancla tu mente al presente.',duracion:'7 min',icono:'🧠'},
+        {tipo:'fisica',nombre:'Caminata activa 20 min',descripcion:'Camina rápido (ritmo que eleve levemente el pulso) por 20 min. Alterna entre 2 min normal y 1 min rápido. Este patrón potencia los beneficios cognitivos.',duracion:'20 min',icono:'⚡'},
+        {tipo:'psicologica',nombre:'Planificación semanal',descripcion:'Revisa tu semana: ¿qué queda pendiente? Prioriza 3 tareas clave para los próximos días. La gestión del tiempo reduce ansiedad y mejora el rendimiento.',duracion:'10 min',icono:'📊'}
+      ]},
+      {nombre:'Viernes',enfoque:'Disfrute y Bienestar',actividades:[
+        {tipo:'fisica',nombre:'Actividad física libre',descripcion:'Haz la actividad que más disfrutes: bailar, jugar, montar bicicleta, nadar. El objetivo es el disfrute — el movimiento placentero también cuenta.',duracion:'25 min',icono:'🎉'},
+        {tipo:'psicologica',nombre:'Tiempo sin pantallas',descripcion:'Durante 1 hora, sin celular ni computador. Habla con alguien, dibuja, cocina, lee un libro físico. El cerebro necesita ese descanso real.',duracion:'60 min',icono:'📵'},
+        {tipo:'recuperacion',nombre:'Gratitud científica',descripcion:'Escribe 3 cosas específicas por las que estás agradecido hoy. La práctica de gratitud activa circuitos de dopamina y mejora el estado de ánimo mediblemente.',duracion:'5 min',icono:'🌟'}
+      ]},
+      {nombre:'Sábado',enfoque:'Cuerpo y Naturaleza',actividades:[
+        {tipo:'fisica',nombre:'Salida activa al aire libre',descripcion:'30 min de actividad al aire libre: parque, cerros, ciclovía. La exposición a espacios naturales reduce el cortisol y mejora la función cognitiva.',duracion:'30 min',icono:'🌳'},
+        {tipo:'recuperacion',nombre:'Yoga restaurativo',descripcion:'Busca en YouTube "yoga restaurativo principiantes 15 minutos". Posturas pasivas que relajan el sistema nervioso sin esfuerzo muscular.',duracion:'15 min',icono:'🧘'},
+        {tipo:'psicologica',nombre:'Conexión social real',descripcion:'Comparte tiempo de calidad con alguien: una conversación sin teléfonos. Las conexiones sociales son el predictor más robusto de bienestar psicológico.',duracion:'30 min',icono:'🤝'}
+      ]},
+      {nombre:'Domingo',enfoque:'Reflexión y Carga',actividades:[
+        {tipo:'psicologica',nombre:'Balance semanal',descripcion:'Escribe: qué lograste esta semana, qué aprendiste, qué quieres ajustar la próxima. Sé honesto y compasivo contigo mismo. Sin juicio.',duracion:'10 min',icono:'📊'},
+        {tipo:'fisica',nombre:'Actividad de recuperación',descripcion:'15 min de estiramientos suaves o caminata tranquila. El domingo no es para entrenar fuerte — es para preparar al cuerpo para la semana.',duracion:'15 min',icono:'🌿'},
+        {tipo:'recuperacion',nombre:'Sueño prioritario',descripcion:'Acuéstate a una hora que te permita dormir 8-9 horas antes del lunes. La mejor preparación para una semana de alto rendimiento es un domingo bien descansado.',duracion:'8-9 h',icono:'😴'}
+      ]}
+    ]
+  };
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+async function init(){
+  // Try to restore session from storage
+  const savedSession = await stGet('apex-session');
+  if(savedSession && savedSession.uid){
+    const userData = await stGet('user-'+savedSession.uid, true);
+    if(userData){
+      session.user = {uid:savedSession.uid,name:userData.name,email:userData.email,isAdmin:userData.isAdmin||false};
+      await loadUserState();
+      updateTopbar();
+      if(appState.routine){
+        renderRoutine();
+      }
+    }
+  }
+}
+
+// Override logout to clear session
+const _logout = logout;
+logout = async function(){
+  await stDel('apex-session');
+  await _logout();
+};
+
+// Override doLogin to save session
+const _doLogin = doLogin;
+doLogin = async function(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('auth-error');
+  if(!email||!pass){errEl.textContent='Completa todos los campos.';errEl.style.display='';return;}
+  const users = await stGet('users-index',true)||{};
+  const uid=users[email];
+  if(!uid){errEl.textContent='No existe una cuenta con ese correo.';errEl.style.display='';return;}
+  const userData=await stGet('user-'+uid,true);
+  if(!userData||userData.passHash!==simpleHash(pass)){errEl.textContent='Contraseña incorrecta.';errEl.style.display='';return;}
+  session.user={uid,name:userData.name,email:userData.email,isAdmin:userData.isAdmin||false};
+  await stSet('apex-session',{uid});
+  await loadUserState();
+  updateTopbar();
+  toast(`¡Bienvenido/a, ${userData.name.split(' ')[0]}! 👋`);
+  if(appState.routine){renderRoutine();showScreen('routine');}
+  else showScreen('home');
+};
+
+init();
+</script>
+</body>
+</html>
